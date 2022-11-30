@@ -58,7 +58,7 @@ jobs:
 
           # specific libs for sensors
           arduino-cli lib install "Adafruit Unified Sensor"@1.1.6
-          arduino-cli lib install "DHT sensor library "@1.4.4
+          arduino-cli lib install "DHT sensor library"@1.4.4
           arduino-cli lib install --git-url https://github.com/Seeed-Studio/Grove_Air_quality_Sensor
           arduino-cli lib install --git-url https://github.com/Seeed-Studio/Grove_Digital_Light_Sensor
           arduino-cli lib install --git-url https://github.com/Infineon/DPS310-Pressure-Sensor.git
