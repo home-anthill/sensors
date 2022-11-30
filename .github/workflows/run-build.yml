@@ -17,7 +17,7 @@ jobs:
   build:
     strategy:
         matrix:
-          esp-devices: [esp32, esp32s2, esp32s3]
+          esp-devices: [esp32s2]
     
     name: Run and test
     runs-on: ubuntu-latest
@@ -55,9 +55,9 @@ jobs:
           arduino-cli lib install "PubSubClient"@2.8.0
 
           # libs for all sensors
-          arduino-cli lib install "Time"@1.6.1
           arduino-cli lib install "TimeAlarms"@1.5.0
-          
+          arduino-cli lib install "Time"@1.6.1
+
           # specific libs to aquire physical measures
           arduino-cli lib install "Adafruit Unified Sensor"@1.1.6
           arduino-cli lib install "DHT sensor library"@1.4.4
