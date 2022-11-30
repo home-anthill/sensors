@@ -52,7 +52,7 @@ jobs:
           # common libs
           arduino-cli lib install "ArduinoJson"@6.19.4
           arduino-cli lib install "HttpClient"@2.2.0
-          arduino-cli lib install "PubSubClient"@2.8
+          arduino-cli lib install "PubSubClient"@2.8.0
           arduino-cli lib install "Time"@1.6.1
           arduino-cli lib install "TimeAlarms"@1.5
 
