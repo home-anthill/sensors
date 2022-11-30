@@ -53,10 +53,12 @@ jobs:
           arduino-cli lib install "ArduinoJson"@6.19.4
           arduino-cli lib install "HttpClient"@2.2.0
           arduino-cli lib install "PubSubClient"@2.8.0
+
+          # libs for all sensors
           arduino-cli lib install "Time"@1.6.1
           arduino-cli lib install "TimeAlarms"@1.5.0
-
-          # specific libs for sensors
+          
+          # specific libs to aquire physical measures
           arduino-cli lib install "Adafruit Unified Sensor"@1.1.6
           arduino-cli lib install "DHT sensor library"@1.4.4
           arduino-cli lib install --git-url https://github.com/Seeed-Studio/Grove_Air_quality_Sensor
