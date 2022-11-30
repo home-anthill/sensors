@@ -381,9 +381,14 @@ void setup() {
   // To be able to connect Serial monitor after reset or power up and before first print out.
   // Do not wait for an attached Serial Monitor!
   delay(3000);
-  // disable ESP32 Devkit-C built-in LED
-  pinMode (LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
+  
+  // not all ESP boards have this variable defined, so I should check
+  // the existance of `LED_BUILTIN`.
+  #ifdef LED_BUILTIN
+    // disable ESP32 Devkit-C built-in LED
+    pinMode (LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
+  #endif
 
   # if SSL==true
   Serial.println("setup - Running with SSL enabled");
