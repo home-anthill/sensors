@@ -1,0 +1,83 @@
+name: Run and test
+
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - '**.MD'
+    branches: [ "master" ]
+    # Publish semver tags as releases.
+    tags: [ 'v*.*.*' ]
+  pull_request:
+    branches: [ "master" ]
+  # To run the workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+        matrix:
+          esp-devices: [esp32, esp32s2, esp32s3]
+    
+    name: Run and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v1
+
+      - name: Install Board support
+        run: |
+          arduino-cli core update-index
+          arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+
+      - name: Init arduino-cli.yaml config file and apply custom configs
+        run: |
+          # init with defaults
+          arduino-cli config init
+
+          # enable_unsafe_install to be able to install libraries via git
+          arduino-cli config set library.enable_unsafe_install true
+
+      - name: Install libraries
+        run: |
+          arduino-cli lib update-index
+
+          # common libs
+          arduino-cli lib install "ArduinoJson"@6.19.4
+          arduino-cli lib install "HttpClient"@2.2.0
+          arduino-cli lib install "PubSubClient"@2.8
+          arduino-cli lib install "Time"@1.6.1
+          arduino-cli lib install "TimeAlarms"@1.5
+
+          # specific libs for sensors
+          arduino-cli lib install "Adafruit Unified Sensor"@1.1.6
+          arduino-cli lib install "DHT sensor library "@1.4.4
+          arduino-cli lib install --git-url https://github.com/Seeed-Studio/Grove_Air_quality_Sensor
+          arduino-cli lib install --git-url https://github.com/Seeed-Studio/Grove_Digital_Light_Sensor
+          arduino-cli lib install --git-url https://github.com/Infineon/DPS310-Pressure-Sensor.git
+      
+      # to get a list of FQBN you can run: `arduino-cli board listall`
+      - name: Building firmwares for ${{ matrix.esp-devices }}
+        run: |
+          # Prepare sensor.h files based on `secrets-template`, because
+          # we don't need real config files to build all firmwares in CI.
+          cp secrets-template sensor-airquality-pir/secrets.h
+          cp secrets-template sensor-barometer/secrets.h
+          cp secrets-template sensor-dht-light/secrets.h
+        
+          # build
+          cd sensor-airquality-pir
+          arduino-cli compile --fqbn esp32:esp32:${{ matrix.esp-devices }} ./sensor-airquality-pir.ino
+          cd ..
+          cd sensor-barometer
+          arduino-cli compile --fqbn esp32:esp32:${{ matrix.esp-devices }} ./sensor-barometer.ino
+          cd ..
+          cd sensor-dht-light
+          arduino-cli compile --fqbn esp32:esp32:${{ matrix.esp-devices }} ./sensor-dht-light.ino
