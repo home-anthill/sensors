@@ -54,7 +54,7 @@ jobs:
           arduino-cli lib install "HttpClient"@2.2.0
           arduino-cli lib install "PubSubClient"@2.8.0
           arduino-cli lib install "Time"@1.6.1
-          arduino-cli lib install "TimeAlarms"@1.5
+          arduino-cli lib install "TimeAlarms"@1.5.0
 
           # specific libs for sensors
           arduino-cli lib install "Adafruit Unified Sensor"@1.1.6
