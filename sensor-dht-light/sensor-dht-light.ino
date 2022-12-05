@@ -33,11 +33,13 @@
 #define DHT_PIN 4 // Digital pin connected to the DHT sensor
 #define DHT_TYPE DHT22 // DHT 22 (AM2302)
 DHT_Unified dht(DHT_PIN, DHT_TYPE);
+AlarmID_t alarmDht;
 // ------------------------------------------------------
 // ------------------------ Light -----------------------
 // Configure I2C GPIOs
 #define I2C_SDA 39
 #define I2C_SCL 40
+AlarmID_t alarmLight;
 // ------------------------------------------------------
 // ------------------------------------------------------
 
@@ -91,6 +93,8 @@ const char* ca_cert = \
 const char* ssid = SECRET_SSID; 
 const char* password = SECRET_PASS;
 String macAddress;
+IPAddress ipAddress;
+bool wifiConnected;
 # if SSL==true
 WiFiClientSecure client;
 # else 
@@ -104,6 +108,8 @@ WiFiClient client;
 const char* mqttUrl = MQTT_URL;
 const int mqttPort = MQTT_PORT;
 PubSubClient mqttClient(mqttUrl, mqttPort, client);
+bool mqttConnected = false;
+uint mqttRetries = 0;
 
 
 String savedUuid;
@@ -130,25 +136,33 @@ char* getRegisterUrl() {
   return registerUrl;
 }
 
-void reconnect() { 
+void mqtt_connect() { 
   while (!mqttClient.connected()) {
-    Serial.println("reconnect - attempting MQTT connection...");
+    Serial.println("mqtt_connect - attempting MQTT connection...");
     mqttClient.setBufferSize(4096);
     
     // here you can use the version with `connect(const char* id, const char* user, const char* pass)` with authentication
     const char* idClient = savedUuid.c_str();
-    Serial.print("reconnect - connecting to MQTT with client id = ");
+    Serial.print("mqtt_connect - connecting to MQTT with client id = ");
     Serial.println(idClient);
 
     if (mqttClient.connect(idClient)) {
-      Serial.print("reconnect - connected and subscribing with savedUuid: ");
+      Serial.print("mqtt_connect - connected and subscribing with savedUuid: ");
       Serial.println(savedUuid);
+      mqttConnected = true;
+      mqttRetries = 0;
     } else {
-      Serial.print("reconnect - failed, rc=");
+      Serial.print("mqtt_connect - failed, rc=");
       Serial.print(mqttClient.state());
+      mqttConnected = false;
+      mqttRetries++;
       Serial.println(" - try again in 5 seconds");
       // Wait 5 seconds before retrying
       delay(5000);
+    }
+    // after 100 retries (100 * 5 = 500 seconds) without success, reboot it
+    if (mqttRetries > 100) {
+      ESP.restart();
     }
   }
 }
@@ -203,14 +217,13 @@ uint registerServer() {
   http.begin(client, registerUrl);
   http.addHeader("Content-Type", "application/json; charset=utf-8");
 
-  macAddress = WiFi.macAddress();
   String features = "[";
   features += "{\"type\": \"sensor\",\"name\": \"humidity\",\"enable\": true,\"priority\": 1,\"unit\": \"%\"},";
   features += "{\"type\": \"sensor\",\"name\": \"temperature\",\"enable\": true,\"priority\": 1,\"unit\": \"°C\"},";
   features += "{\"type\": \"sensor\",\"name\": \"light\",\"enable\": true,\"priority\": 1,\"unit\": \"lux\"}";
   features += "]";
 
- String registerPayload = "{\"mac\": \"" + WiFi.macAddress() + 
+  String registerPayload = "{\"mac\": \"" + macAddress + 
     "\",\"manufacturer\": \"" + MANUFACTURER +
     "\",\"model\": \"" + MODEL +
     "\",\"apiToken\": \"" + API_TOKEN +   
@@ -276,6 +289,7 @@ uint registerServer() {
       //   return 5;
       // }
 
+      // save UUID in Preferences
       preferences.begin("device", false); 
       String uuidStr = String(uuidValue);
       size_t len = preferences.putString("uuid", uuidStr);
@@ -374,12 +388,59 @@ void initLightSensor() {
   Serial.println("initLightSensor - sensor initialized successfully!");
 }
 
+void wifi_connect() {
+  Serial.println("wifi_connect - called");
+  WiFi.begin(ssid, password);
+  Serial.println("wifi_connect - connecting");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nwifi_connect - WiFi connected!");
+  wifiConnected = true;
+
+  ipAddress = WiFi.localIP();
+  macAddress = WiFi.macAddress();
+  Serial.print("wifi_connect - IP address: ");
+  Serial.println(ipAddress);
+  Serial.print("wifi_connect - MAC address: ");
+  Serial.println(macAddress);
+}
+
+void wifi_reconnect() {
+  Serial.println("wifi_reconnect - reconnecting...");
+  wifi_connect();
+}
+
+void alarms_init() {
+  alarmDht = Alarm.timerRepeat(30, readDHTSensorValue);
+  Alarm.disable(alarmDht);
+  // alarmLight = Alarm.timerRepeat(45, readLightSensorValue);
+  // Alarm.disable(alarmLight);
+}
+
+void alarms_enable() {
+  Alarm.enable(alarmDht);
+  // Alarm.enable(alarmLight);
+}
+
+void alarms_disable() {
+  Alarm.disable(alarmDht);
+  // Alarm.disable(alarmLight);
+}
+
+void initSensors() {
+  initDHTSensor();
+  initLightSensor();
+}
+
 void setup() {
   // Init serial port
   Serial.begin(115200);
   // To be able to connect Serial monitor after reset or power up and before first print out.
   // Do not wait for an attached Serial Monitor!
   delay(3000);
+  Serial.println("setup - starting...");
   
   // not all ESP boards have this variable defined, so I should check
   // the existance of `LED_BUILTIN`.
@@ -395,36 +456,35 @@ void setup() {
   Serial.println("setup - Running WITHOUT SSL");
   # endif
 
-  Serial.println("--------------- WiFi ----------------");
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+  setTime(0,0,0,1,1,21); // set time to Saturday 00:00:00am Jan 1 2021
 
-  Serial.println("setup - WiFi connected!");
-  Serial.print("setup - IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("setup - MAC address: ");
-  Serial.println(WiFi.macAddress());
+  // init wifi connection
+  wifi_connect();
 
+  // init sensors, but disable them
+  alarms_init();
+
+  // register
   Serial.println("setup - Registering this device...");
   uint result = registerServer();
+  Serial.print("setup - registerServer() returned result=");
+  Serial.println(result);
+
   if (result == 0) {
     Serial.println("setup - Starting 'notify*' functions...");
-    setTime(0,0,0,1,1,21); // set time to Saturday 00:00:00am Jan 1 2021
-    Alarm.timerRepeat(30, readDHTSensorValue);
-    Alarm.timerRepeat(45, readLightSensorValue);
+    alarms_init();
   } else {
     Serial.println("setup - registerServer() returned error code, cannot continue");
     return;
   }
 
+  // read UUID from preferences
+  // if it's the first boot, it will be the same already stored in global variable 'savedUuid' because already filled by registerServer()
+  // otherwise, it read the eixsting UUID form preferences, because registerServier() won't return the UUID again
   Serial.println("setup - Getting saved UUID from preferences...");
   preferences.begin("device", false); 
   savedUuid = preferences.getString("uuid", "");
   preferences.end();
-
   if (savedUuid.equals("")) {
     Serial.println("************* ERROR **************");
     Serial.println("setup - Cannot read saved UUID from Preferences");
@@ -432,23 +492,31 @@ void setup() {
     return;
   }
 
-  initDHTSensor();
-  initLightSensor();
+  initSensors();
 
-  delay(1500);
+  delay(1000);
 }
 
 void loop() {
-  // if 'savedUuid' is not defined, you cannot use this device
+  // if 'savedUuid' is not defined, it's an unregistered device
   if (savedUuid == NULL || savedUuid.length() == 0) {
     Serial.println("loop - savedUuid NOT FOUND, cannot continue...");
     delay(60000);
     return;
   }
 
-  if (!mqttClient.connected()) {
-    Serial.println("loop - RECONNECTING...");
-    reconnect();
+  if (WiFi.status() != WL_CONNECTED) {
+    wifiConnected = false;
+    alarms_disable();
+    Serial.println("loop - WiFi connection lost!");
+    wifi_reconnect();
+  }
+
+  mqttConnected = mqttClient.connected();
+  if (!mqttConnected) {
+    Serial.println("loop - mqtt connecting...");
+    mqtt_connect();
+    alarms_enable();
   }
 
   mqttClient.loop();
