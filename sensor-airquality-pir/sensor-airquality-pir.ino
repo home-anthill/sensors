@@ -199,8 +199,8 @@ uint registerServer() {
 
   macAddress = WiFi.macAddress();
   String features = "[";
-  features += "{\"type\": \"sensor\",\"name\": \"airquality\",\"enable\": true,\"priority\": 1,\"unit\": \"-\"},";
-  features += "{\"type\": \"sensor\",\"name\": \"motion\",\"enable\": true,\"priority\": 2,\"unit\": \"-\"}";
+  features += "{\"type\": \"sensor\",\"name\": \"airquality\",\"enable\": true,\"order\": 1,\"unit\": \"-\"},";
+  features += "{\"type\": \"sensor\",\"name\": \"motion\",\"enable\": true,\"order\": 2,\"unit\": \"-\"}";
   features += "]";
 
  String registerPayload = "{\"mac\": \"" + WiFi.macAddress() + 
