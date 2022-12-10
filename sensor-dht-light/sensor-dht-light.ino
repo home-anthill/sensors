@@ -14,9 +14,9 @@
 #include "wifi_handler.h"
 #include "mqtt_handler.h"
 #include "registration.h"
+#include "storage.h"
 #include "dht_sensor.h"
 #include "light_sensor.h"
-#include "storage.h"
 
 // alarms used to periodically read values from sensors
 AlarmID_t alarm_dht;
@@ -58,18 +58,18 @@ void read_light_sensor_value() {
 void alarms_init() {
   alarm_dht = Alarm.timerRepeat(30, read_dht_sensor_value);
   Alarm.disable(alarm_dht);
-  // alarm_light = Alarm.timerRepeat(45, read_light_sensor_value);
-  // Alarm.disable(alarm_light);
+  alarm_light = Alarm.timerRepeat(45, read_light_sensor_value);
+  Alarm.disable(alarm_light);
 }
 
 void alarms_enable() {
   Alarm.enable(alarm_dht);
-  // Alarm.enable(alarm_light);
+  Alarm.enable(alarm_light);
 }
 
 void alarms_disable() {
   Alarm.disable(alarm_dht);
-  // Alarm.disable(alarm_light);
+  Alarm.disable(alarm_light);
 }
 
 void init_sensors() {
