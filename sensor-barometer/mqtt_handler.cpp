@@ -28,7 +28,18 @@ void mqtt_connect(String uuid) {
     Serial.print("mqtt_connect - connecting to MQTT with client id = ");
     Serial.println(id_client);
 
-    if (mqtt_client.connect(id_client)) {
+    bool connected = false;
+    # if MQTT_AUTH==true
+      Serial.println("mqtt_connect - connecting to MQTT with authentication");
+      const char* mqtt_username = MQTT_USERNAME; 
+      const char* mqtt_password = MQTT_PASSWORD;
+      connected = mqtt_client.connect(id_client, mqtt_username, mqtt_password);
+    # else
+      Serial.println("mqtt_connect - connecting to MQTT without authentication");
+      connected = mqtt_client.connect(id_client)
+    # endif
+
+    if (connected) {
       Serial.print("mqtt_connect - connected and subscribing with uuid: ");
       Serial.println(uuid);
       mqtt_retries = 0;
