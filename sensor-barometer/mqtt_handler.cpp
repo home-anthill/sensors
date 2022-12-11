@@ -36,7 +36,7 @@ void mqtt_connect(String uuid) {
       connected = mqtt_client.connect(id_client, mqtt_username, mqtt_password);
     # else
       Serial.println("mqtt_connect - connecting to MQTT without authentication");
-      connected = mqtt_client.connect(id_client)
+      connected = mqtt_client.connect(id_client);
     # endif
 
     if (connected) {
