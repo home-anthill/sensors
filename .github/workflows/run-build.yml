@@ -30,7 +30,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Arduino CLI
         uses: arduino/setup-arduino-cli@v1
@@ -55,7 +55,7 @@ jobs:
           arduino-cli lib update-index
 
           # common libs
-          arduino-cli lib install "ArduinoJson"@6.19.4
+          arduino-cli lib install "ArduinoJson"@6.21.3
           arduino-cli lib install "HttpClient"@2.2.0
           arduino-cli lib install "PubSubClient"@2.8.0
 
@@ -64,11 +64,11 @@ jobs:
           arduino-cli lib install "Time"@1.6.1
 
           # specific libs to aquire physical measures
-          arduino-cli lib install "Adafruit Unified Sensor"@1.1.6
-          arduino-cli lib install "DHT sensor library"@1.4.4
+          arduino-cli lib install "Adafruit Unified Sensor"@1.1.14
+          arduino-cli lib install "DHT sensor library"@1.4.6
+          arduino-cli lib install "XENSIV Digital Pressure Sensor"@1.0.0
           arduino-cli lib install --git-url https://github.com/Seeed-Studio/Grove_Air_quality_Sensor
           arduino-cli lib install --git-url https://github.com/Seeed-Studio/Grove_Digital_Light_Sensor
-          arduino-cli lib install --git-url https://github.com/Infineon/DPS310-Pressure-Sensor.git
       
       # to get a list of FQBN you can run: `arduino-cli board listall`
       - name: Building firmwares for ${{ matrix.esp-devices }}
